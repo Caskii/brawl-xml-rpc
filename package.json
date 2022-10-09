@@ -1,0 +1,9 @@
+{
+	"dependencies": {
+		"@evotm/gbxclient": "^1.2.1",
+		"dotenv": "^16.0.3",
+		"mongodb": "^4.9.1",
+		"mongoose": "^6.6.1"
+	},
+	"type": "module"
+}
