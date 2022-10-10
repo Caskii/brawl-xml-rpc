@@ -1,15 +1,24 @@
 import { GbxClient } from '@evotm/gbxclient';
 import { MongoClient,ServerApiVersion  } from 'mongodb';
+import dotenv from 'dotenv'
 
-const dotenv = require('dotenv').config();
+const env = dotenv.config();
 const uri = process.env.DB_URI;
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
 
 
 async function main() {
+    let servers = [
+        {name:"server-1",ip:"127.0.0.1",port:5000},
+    ]
+    servers.forEach(server => {
+       startGbxClient(server);
+    });
+}
+async function startGbxClient(serverInfos){
     let gbx = new GbxClient();
-    await gbx.connect("127.0.0.1", 5000);
+    await gbx.connect(serverInfos.ip, serverInfos.port);
     await gbx.call("SetApiVersion", "2013-04-16");
     await gbx.call("EnableCallbacks", true);       
 
@@ -29,10 +38,8 @@ async function main() {
 		['GetNextMapInfo'],
     ]);
 
-    saveInitialsInformations(response[0],response[1],response[2],response[3],response[4]);
+    saveInitialsInformations(response[0],response[1],response[2],response[3],response[4],serverInfos.name);
     console.log("Done");
-    let serverId = response[2][0]['NickName'];
-
 
     //callbacks to update information
 	gbx.on("ManiaPlanet.BeginMap", async (response) => {
@@ -42,11 +49,11 @@ async function main() {
         client.connect(async err => {
             const collection = client.db("Brawl").collection("servers");
             await collection.updateOne(
-                { _id :serverId},
+                { _id :serverInfos.name},
                 { $set: { currentMap :response[0]['UId']}}
             );
             await collection.updateOne(
-                { _id :serverId},
+                { _id :serverInfos.name},
                 { $set: { nextMap :nextMap['UId']}}
             );
             client.close();
@@ -59,7 +66,7 @@ async function main() {
         client.connect(async err => {
             const collection = client.db("Brawl").collection("servers");
             await collection.updateOne(
-                { _id :serverId},
+                { _id :serverInfos.name},
                 { $push: { players:{login:response[0],name:playerInfo['NickName']}}}
             );
             client.close();
@@ -71,7 +78,7 @@ async function main() {
         client.connect(async err => {
             const collection = client.db("Brawl").collection("servers");
             await collection.updateOne(
-                {_id :serverId },
+                {_id :serverInfos.name },
                 { $pull: { players:{ login:response[0]}}}
             );
             client.close();
@@ -85,7 +92,7 @@ async function main() {
             client.connect(async err => {
                 const collection = client.db("Brawl").collection("servers");
                 await collection.updateOne(
-                    { _id :serverId},
+                    { _id :serverInfos.name},
                     { $set: { maps :mapList}}
                 );
                 client.close();
@@ -94,7 +101,7 @@ async function main() {
     });
     console.log("Listening to server...");
 }
-async function saveInitialsInformations(systemInfo,mapList,entitiesList,currentMap,nextMap){
+async function saveInitialsInformations(systemInfo,mapList,entitiesList,currentMap,nextMap,idInDatabase){
     let maps=[];
     let players=[]
 
@@ -113,8 +120,8 @@ async function saveInitialsInformations(systemInfo,mapList,entitiesList,currentM
     //update or create the server document
     client.connect(async err => {
         const collection = client.db("Brawl").collection("servers");
-        const query = { _id: server['NickName'] };
-        const update = { $set: {_id: server['NickName'], map:maps,players:players,currentMap:currentMap['UId'],nextMap:nextMap['UId'] }};
+        const query = { _id: idInDatabase };
+        const update = { $set: {_id: idInDatabase, map:maps,players:players,currentMap:currentMap['UId'],nextMap:nextMap['UId'] }};
         const options = { upsert: true };     
         await collection.updateOne(query, update, options);
         client.close();
