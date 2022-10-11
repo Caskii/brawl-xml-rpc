@@ -121,7 +121,7 @@ async function saveInitialsInformations(systemInfo,mapList,entitiesList,currentM
     client.connect(async err => {
         const collection = client.db("Brawl").collection("servers");
         const query = { _id: idInDatabase };
-        const update = { $set: {_id: idInDatabase, map:maps,players:players,currentMap:currentMap['UId'],nextMap:nextMap['UId'] }};
+        const update = { $set: {_id: idInDatabase, serverName:server['NickName'], map:maps,players:players,currentMap:currentMap['UId'],nextMap:nextMap['UId'] }};
         const options = { upsert: true };     
         await collection.updateOne(query, update, options);
         client.close();
